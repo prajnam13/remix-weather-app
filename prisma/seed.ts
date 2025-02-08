@@ -4,50 +4,46 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function seed() {
-  const email = "rachel@remix.run";
+  const email = "ipgautomotive@example.com"; // Use a default email
+  const username = "ipgautomotive";
+  const password = "carmaker";
 
-  // cleanup the existing database
-  await prisma.user.delete({ where: { email } }).catch(() => {
-    // no worries if it doesn't exist yet
-  });
+  // Hash the password before storing
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-  const hashedPassword = await bcrypt.hash("racheliscool", 10);
+  try {
+    // Delete existing user if exists (for re-seeding)
+    await prisma.user.deleteMany();
 
-  const user = await prisma.user.create({
-    data: {
-      email,
-      password: {
-        create: {
-          hash: hashedPassword,
-        },
+    // Create a new user
+    const user = await prisma.user.create({
+      data: {
+        username,
+        email,
+        password: hashedPassword,
       },
-    },
-  });
+    });
 
-  await prisma.note.create({
-    data: {
-      title: "My first note",
-      body: "Hello, world!",
-      userId: user.id,
-    },
-  });
+    console.log(`Created user: ${user.username}`);
 
-  await prisma.note.create({
-    data: {
-      title: "My second note",
-      body: "Hello, world!",
-      userId: user.id,
-    },
-  });
+    // Seed favorite cities (Max: 5)
+    const cities = ["New York", "Los Angeles", "London", "Tokyo", "Paris"];
+    
+    await prisma.city.createMany({
+      data: cities.map((city) => ({
+        name: city,
+        userId: user.id,
+      })),
+    });
 
-  console.log(`Database has been seeded. 🌱`);
+    console.log("Seeded favorite cities:", cities);
+    console.log("Database has been seeded successfully! 🌱");
+
+  } catch (error) {
+    console.error("Error seeding database:", error);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-seed()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+seed();
