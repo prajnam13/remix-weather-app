@@ -3,7 +3,16 @@ import { json, redirect } from "@remix-run/node";
 import { prisma } from "~/db.server";
 import { requireUserSession, getSession } from "~/utils/session.server";
 import { fetchWeather } from "~/utils/weather.server";
-import { Button, TextField, Typography, Card, CardContent, Container, Grid } from "@mui/material";
+import { Button, TextField, Typography, Card, CardContent, Container, Grid, IconButton } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+
+type LoaderData = {
+  username: string;
+  cities: { id: string; name: string }[];
+  weatherData: {
+    current: { condition: { text: string; icon: string }; temp_c: number; humidity: number; precip_mm: number };
+  }[];
+};
 
 export async function loader({ request }: { request: Request }) {
   const userId = await requireUserSession(request);
@@ -21,7 +30,7 @@ export async function action({ request }: { request: Request }) {
   const userId = await requireUserSession(request);
   const formData = await request.formData();
   const cityName = formData.get("city") as string;
-
+  
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { cities: true } });
   if (!user || user.cities.length >= 5) return json({ error: "Max 5 cities allowed" });
 
@@ -31,7 +40,7 @@ export async function action({ request }: { request: Request }) {
 }
 
 export default function HomePage() {
-  const { username, cities, weatherData } = useLoaderData();
+  const { username, cities, weatherData } = useLoaderData<LoaderData>();
 
   return (
     <Container>
